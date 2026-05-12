@@ -114,3 +114,190 @@ pipeline {
         }
     }
 }
+
+// Voici l'explication ligne par ligne du pipeline Jenkinsfile-TetrisV1 :
+
+
+// pipeline {
+//     agent any
+// pipeline { } → Debut du pipeline Jenkins. Tout le code est dans ce bloc.
+// agent any → "Execute ce pipeline sur n'importe quel serveur/agent Jenkins disponible."
+
+//     tools {
+//         nodejs 'nodejs'
+//     }
+// tools { } → Dit a Jenkins quels outils installer avant de demarrer.
+// nodejs 'nodejs' → Installe Node.js (configure dans Jenkins sous le nom nodejs). Necessaire car Tetris-V1 est une application React qui utilise npm.
+
+//     environment {
+//         SCANNER_HOME=tool 'sonar-scanner'
+//     }
+// environment { } → Declare des variables d'environnement disponibles dans tout le pipeline.
+// SCANNER_HOME=tool 'sonar-scanner' → Recupere le chemin d'installation de SonarScanner (configure dans Jenkins) et le met dans la variable SCANNER_HOME. On s'en servira plus tard pour analyser le code.
+
+//     stages {
+// stages { } → Contient toutes les etapes du pipeline dans l'ordre.
+// Stage 1 — Nettoyage
+
+//         stage('Cleaning Workspace') {
+//             steps {
+//                 cleanWs()
+//             }
+//         }
+// cleanWs() → Supprime tous les fichiers du workspace Jenkins avant de commencer. Evite que d'anciens fichiers d'un build precedent causent des problemes.
+// Stage 2 — Recuperer le code
+
+//         stage('Checkout from Git') {
+//             steps {
+//                 git branch: 'main', url: 'https://github.com/EdemAMEGBETO/...'
+//             }
+//         }
+// Clone le depot GitHub sur la branche main pour avoir le code source de l'application sur le serveur Jenkins.
+// Stage 3 — Analyse de qualite du code (SonarQube)
+
+//         stage('Sonarqube Analysis') {
+//             steps {
+//                 dir('Tetris-V1') {
+//                     withSonarQubeEnv('sonar-scanner') {
+//                         sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Tetris \
+//                         -Dsonar.projectKey=Tetris '''
+//                     }
+//                 }
+//             }
+//         }
+// dir('Tetris-V1') → Se deplace dans le dossier Tetris-V1/.
+// withSonarQubeEnv('sonar-scanner') → Injecte la configuration SonarQube (URL du serveur, token) depuis Jenkins.
+// sonar-scanner -Dsonar.projectName=Tetris -Dsonar.projectKey=Tetris → Lance l'analyse statique du code. SonarQube cherche des bugs, des vulnerabilites, du code duplique. -D signifie "parametre".
+// Stage 4 — Verification de la Quality Gate
+
+//         stage('Quality Check') {
+//             steps {
+//                 script {
+//                     waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
+//                 }
+//             }
+//         }
+// waitForQualityGate → Attend que SonarQube retourne son verdict (OK ou KO).
+// abortPipeline: false → Meme si la quality gate echoue, le pipeline continue (il ne s'arrete pas). En production on mettrait true pour bloquer.
+// credentialsId: 'sonar-token' → Utilise le token SonarQube stocke dans Jenkins pour s'authentifier.
+// Stage 5 — Installation des dependances
+
+//         stage('Installing Dependencies') {
+//             steps {
+//                 dir('Tetris-V1') {
+//                     sh 'npm install'
+//                 }
+//             }
+//         }
+// npm install → Telecharge toutes les librairies JavaScript listees dans package.json (React, etc.). C'est l'equivalent de pip install en Python.
+// Stage 6 — Scan des dependances (OWASP)
+
+//         stage('OWASP Dependency-Check Scan') {
+//             steps {
+//                 dir('Tetris-V1') {
+//                     dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+//                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+//                 }
+//             }
+//         }
+// dependencyCheck → Outil OWASP qui scanne toutes les librairies npm pour detecter des CVE (vulnerabilites connues publiquement).
+// --scan ./ → Scanne tout le dossier courant.
+// --disableYarnAudit --disableNodeAudit → Desactive les audits Yarn et Node natifs (on utilise uniquement OWASP).
+// dependencyCheckPublisher → Publie le rapport XML dans l'interface Jenkins pour le visualiser.
+// Stage 7 — Scan du systeme de fichiers (Trivy)
+
+//         stage('Trivy File Scan') {
+//             steps {
+//                 dir('Tetris-V1') {
+//                     sh 'trivy fs . > trivyfs.txt'
+//                 }
+//             }
+//         }
+// trivy fs . → Trivy est un scanner de securite. Ici il scanne les fichiers du projet (pas encore l'image Docker) a la recherche de vulnerabilites dans les dependances et configs.
+// > trivyfs.txt → Redirige le resultat dans un fichier texte pour le conserver.
+// Stage 8 — Construction de l'image Docker
+
+//         stage("Docker Image Build") {
+//             steps {
+//                 script {
+//                     dir('Tetris-V1') {
+//                         withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+//                             sh 'docker system prune -f'
+//                             sh 'docker build -t tetrisv1 .'
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+// withDockerRegistry(credentialsId: 'docker') → S'authentifie sur Docker Hub avec les credentials stockes dans Jenkins.
+// docker system prune -f → Supprime les anciennes images/conteneurs inutiles pour liberer de l'espace disque. -f = force (pas de confirmation).
+// docker build -t tetrisv1 . → Construit l'image Docker a partir du Dockerfile dans Tetris-V1/. Le tag local est tetrisv1.
+// Stage 9 — Push de l'image Docker
+
+//         stage("Docker Image Pushing") {
+//             steps {
+//                 script {
+//                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+//                         sh 'docker tag tetrisv1 avian19/tetrisv1:${BUILD_NUMBER}'
+//                         sh 'docker push avian19/tetrisv1:${BUILD_NUMBER}'
+//                     }
+//                 }
+//             }
+//         }
+// docker tag tetrisv1 avian19/tetrisv1:${BUILD_NUMBER} → Renomme l'image avec le nom Docker Hub avian19/tetrisv1 et le numero de build Jenkins comme version (ex: :42). ${BUILD_NUMBER} est une variable automatique Jenkins.
+// docker push ... → Envoie l'image sur Docker Hub pour qu'elle soit accessible depuis n'importe ou (notamment depuis Kubernetes).
+// Stage 10 — Scan de l'image Docker (Trivy)
+
+//         stage("TRIVY Image Scan") {
+//             steps {
+//                 sh 'trivy image avian19/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
+//             }
+//         }
+// trivy image ... → Cette fois Trivy scanne l'image Docker qui vient d'etre pushee, pour detecter des vulnerabilites dans les couches de l'image (OS, librairies systeme, etc.).
+// > trivyimage.txt → Sauvegarde le rapport dans un fichier.
+// Stage 11 — Recheckout du code
+
+//         stage('Checkout Code') {
+//             steps {
+//                 git branch: 'master', url: 'https://github.com/EdemAMEGBETO/...'
+//             }
+//         }
+// Re-clone le depot mais cette fois sur la branche master. Necessaire car l'etape suivante va modifier et pousser un fichier sur master.
+// Stage 12 — Mise a jour du fichier de deploiement Kubernetes
+
+//         stage('Update Deployment file') {
+//             environment {
+//                 GIT_REPO_NAME = "End-to-End-Kubernetes-DevSecOps-Tetris-Project"
+//                 GIT_USER_NAME = "AmanPathak-DevOps"
+//             }
+//             steps {
+//                 dir('Manifest-file') {
+//                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+//                         sh '''
+//                             git config user.email "aman07pathak@gmail.com"
+//                             git config user.name "AmanPathak-DevOps"
+//                             BUILD_NUMBER=${BUILD_NUMBER}
+//                             imageTag=$(grep -oP '(?<=tetrisv1:)[^ ]+' deployment-service.yml)
+//                             sed -i "s/tetrisv1:${imageTag}/tetrisv1:${BUILD_NUMBER}/" deployment-service.yml
+//                             git add deployment-service.yml
+//                             git commit -m "Update deployment Image to version \${BUILD_NUMBER}"
+//                             git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:master
+//                         '''
+//                     }
+//                 }
+//             }
+//         }
+// C'est le stage le plus complexe — c'est le coeur du GitOps :
+
+// withCredentials([string(..., variable: 'GITHUB_TOKEN')]) → Injecte le token GitHub dans la variable GITHUB_TOKEN pour pouvoir pousser du code.
+// git config user.email / user.name → Configure l'identite Git localement pour pouvoir faire un commit.
+// imageTag=$(grep -oP '(?<=tetrisv1:)[^ ]+' deployment-service.yml) → Extrait le numero de version actuel de l'image dans le fichier YAML Kubernetes. grep -oP avec une regex recupere ce qui suit tetrisv1:.
+// sed -i "s/tetrisv1:${imageTag}/tetrisv1:${BUILD_NUMBER}/" deployment-service.yml → Remplace l'ancien tag par le nouveau dans le fichier YAML. Kubernetes saura ainsi quelle version deployer.
+// git add / commit / push → Commit et pousse la modification sur GitHub. ArgoCD (ou tout autre outil GitOps) detectera ce changement et deploiera automatiquement la nouvelle version sur Kubernetes.
+// Resume du flux global :
+
+
+// Nettoyage → Git clone → SonarQube → Quality Gate → npm install
+// → OWASP scan → Trivy FS scan → Docker build → Docker push
+// → Trivy image scan → Mise a jour du manifest Kubernetes → Git push
+// C'est un pipeline CI/CD complet avec DevSecOps : le code est analyse, securise, construit, publie, et le deploiement Kubernetes est mis a jour automatiquement a chaque build.
