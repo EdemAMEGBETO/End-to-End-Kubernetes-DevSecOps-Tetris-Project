@@ -72,15 +72,15 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-                        sh 'docker tag tetrisv1 avian19/tetrisv1:${BUILD_NUMBER}'
-                        sh 'docker push avian19/tetrisv1:${BUILD_NUMBER}'
+                        sh 'docker tag tetrisv1 200491/tetrisv1:${BUILD_NUMBER}'
+                        sh 'docker push 200491/tetrisv1:${BUILD_NUMBER}'
                     }
                 }
             }
         }
         stage("TRIVY Image Scan") {
             steps {
-                sh 'trivy image avian19/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
+                sh 'trivy image 200491/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
             }
         }
         stage('Checkout Code') {
@@ -91,14 +91,14 @@ pipeline {
         stage('Update Deployment file') {
             environment {
                 GIT_REPO_NAME = "End-to-End-Kubernetes-DevSecOps-Tetris-Project"
-                GIT_USER_NAME = "AmanPathak-DevOps"
+                GIT_USER_NAME = "EdemAMEGBETO"
             }
             steps {
                 dir('Manifest-file') {
                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         sh '''
-                            git config user.email "aman07pathak@gmail.com"
-                            git config user.name "AmanPathak-DevOps"
+                            git config user.email "amegbetoedem@gmail.com"
+                            git config user.name "EdemAMEGBETO"
                             BUILD_NUMBER=${BUILD_NUMBER}
                             echo $BUILD_NUMBER
                             imageTag=$(grep -oP '(?<=tetrisv1:)[^ ]+' deployment-service.yml)
@@ -238,19 +238,19 @@ pipeline {
 //             steps {
 //                 script {
 //                     withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-//                         sh 'docker tag tetrisv1 avian19/tetrisv1:${BUILD_NUMBER}'
-//                         sh 'docker push avian19/tetrisv1:${BUILD_NUMBER}'
+//                         sh 'docker tag tetrisv1 200491/tetrisv1:${BUILD_NUMBER}'
+//                         sh 'docker push 200491/tetrisv1:${BUILD_NUMBER}'
 //                     }
 //                 }
 //             }
 //         }
-// docker tag tetrisv1 avian19/tetrisv1:${BUILD_NUMBER} → Renomme l'image avec le nom Docker Hub avian19/tetrisv1 et le numero de build Jenkins comme version (ex: :42). ${BUILD_NUMBER} est une variable automatique Jenkins.
+// docker tag tetrisv1 200491/tetrisv1:${BUILD_NUMBER} → Renomme l'image avec le nom Docker Hub avian19/tetrisv1 et le numero de build Jenkins comme version (ex: :42). ${BUILD_NUMBER} est une variable automatique Jenkins.
 // docker push ... → Envoie l'image sur Docker Hub pour qu'elle soit accessible depuis n'importe ou (notamment depuis Kubernetes).
 // Stage 10 — Scan de l'image Docker (Trivy)
 
 //         stage("TRIVY Image Scan") {
 //             steps {
-//                 sh 'trivy image avian19/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
+//                 sh 'trivy image 200491/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
 //             }
 //         }
 // trivy image ... → Cette fois Trivy scanne l'image Docker qui vient d'etre pushee, pour detecter des vulnerabilites dans les couches de l'image (OS, librairies systeme, etc.).
@@ -268,14 +268,14 @@ pipeline {
 //         stage('Update Deployment file') {
 //             environment {
 //                 GIT_REPO_NAME = "End-to-End-Kubernetes-DevSecOps-Tetris-Project"
-//                 GIT_USER_NAME = "AmanPathak-DevOps"
+//                 GIT_USER_NAME = "EdemAMEGBETO"
 //             }
 //             steps {
 //                 dir('Manifest-file') {
 //                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
 //                         sh '''
-//                             git config user.email "aman07pathak@gmail.com"
-//                             git config user.name "AmanPathak-DevOps"
+//                             git config user.email "amegbetoedem@gmail.com"
+//                             git config user.name "EdemAMEGBETO"
 //                             BUILD_NUMBER=${BUILD_NUMBER}
 //                             imageTag=$(grep -oP '(?<=tetrisv1:)[^ ]+' deployment-service.yml)
 //                             sed -i "s/tetrisv1:${imageTag}/tetrisv1:${BUILD_NUMBER}/" deployment-service.yml
