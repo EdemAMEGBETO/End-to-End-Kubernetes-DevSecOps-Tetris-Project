@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout from Git') {
             steps {
-                git branch: 'master', url: 'https://github.com/EdemAMEGBETO/End-to-End-Kubernetes-DevSecOps-Tetris-Project.git'
+                git branch: 'main', url: 'https://github.com/EdemAMEGBETO/End-to-End-Kubernetes-DevSecOps-Tetris-Project.git'
             }
         }
         stage('Initializing Terraform') {
@@ -70,3 +70,119 @@ pipeline {
         }
     }
 }
+
+// Voici l'explication ligne par ligne du pipeline Jenkinsfile-EKS-Terraform :
+
+
+// properties([
+//     parameters([
+//         string(defaultValue: 'variables.tfvars', description: 'Specify the file name', name: 'File-Name'),
+//         choice(choices: ['plan', 'apply', 'destroy'], description: 'Select Terraform action', name: 'Terraform-Action')
+//     ])
+// ])
+// Ce bloc definit les parametres du pipeline.
+
+// properties([parameters([...])]) → Dit a Jenkins : "Ce pipeline accepte des parametres que l'utilisateur peut renseigner avant de lancer le build."
+// string(defaultValue: 'variables.tfvars', ...) → Cree un champ texte nomme File-Name. Par defaut il vaut variables.tfvars (le fichier de variables Terraform). L'utilisateur peut le changer.
+// choice(choices: ['plan', 'apply', 'destroy'], ...) → Cree un menu deroulant nomme Terraform-Action avec 3 choix : plan, apply, ou destroy. L'utilisateur choisit quelle action Terraform executer.
+
+// pipeline {
+//     agent any
+// pipeline { } → Debut du pipeline Jenkins declaratif. Tout le pipeline est dans ce bloc.
+// agent any → "Execute ce pipeline sur n'importe quel agent Jenkins disponible" (peu importe le serveur/noeud).
+
+//     stages {
+// stages { } → Contient toutes les etapes (stages) du pipeline. Les stages s'executent dans l'ordre, l'une apres l'autre.
+
+//         stage('Checkout from Git') {
+//             steps {
+//                 git branch: 'master', url: 'https://github.com/EdemAMEGBETO/End-to-End-Kubernetes-DevSecOps-Tetris-Project.git'
+//             }
+//         }
+// Stage 1 — Recuperer le code source.
+
+// stage('Checkout from Git') → Nom de l'etape affiché dans l'interface Jenkins.
+// git branch: 'master', url: '...' → Clone le depot GitHub sur la branche master. C'est la premiere chose a faire : avoir le code sur le serveur Jenkins.
+
+//         stage('Initializing Terraform') {
+//             steps {
+//                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
+//                 dir('EKS-TF') {
+//                     script {
+//                         sh 'terraform init'
+//                     }
+//                 }
+//                 }
+//             }
+//         }
+// Stage 2 — Initialiser Terraform.
+
+// withAWS(credentials: 'aws-key', region: 'us-east-1') → Injecte les credentials AWS stockes dans Jenkins sous le nom aws-key. Terraform en a besoin pour parler a AWS.
+// dir('EKS-TF') → Se deplace dans le dossier EKS-TF/ (la ou se trouve le code Terraform de l'EKS).
+// sh 'terraform init' → Execute terraform init : telecharge les providers (ex: AWS provider), prepare le backend (S3 pour stocker le state). C'est toujours la premiere commande Terraform.
+
+//         stage('Validate Terraform Code') {
+//             steps {
+//                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
+//                 dir('EKS-TF') {
+//                     script {
+//                         sh 'terraform validate'
+//                     }
+//                 }
+//                 }
+//             }
+//         }
+// Stage 3 — Valider le code Terraform.
+
+// sh 'terraform validate' → Verifie que le code Terraform est syntaxiquement correct (pas de fautes de frappe, pas d'arguments invalides). Ne touche pas a AWS, c'est une verification locale.
+
+//         stage('Terraform Plan') {
+//             steps {
+//                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
+//                 dir('EKS-TF') {
+//                     script {
+//                         sh "terraform plan -var-file=${params.'File-Name'}"
+//                     }
+//                 }
+//                 }
+//             }
+//         }
+// Stage 4 — Planifier les changements.
+
+// sh "terraform plan -var-file=${params.'File-Name'}" → Execute terraform plan avec le fichier de variables choisi par l'utilisateur (par defaut variables.tfvars). Terraform compare l'etat actuel de l'infrastructure AWS avec ce que le code declare, et affiche ce qu'il va creer/modifier/supprimer. Rien n'est encore cree sur AWS.
+
+//         stage('Terraform Action') {
+//             steps {
+//                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
+//                 script {
+//                     echo "${params.'Terraform-Action'}"
+//                     dir('EKS-TF') {
+//                         script {
+//                             if (params.'Terraform-Action' == 'plan') {
+//                                 sh "terraform plan -var-file=${params.'File-Name'}"
+//                             } else if (params.'Terraform-Action' == 'apply') {
+//                                 sh "terraform apply -auto-approve -var-file=${params.'File-Name'}"
+//                             } else if (params.'Terraform-Action' == 'destroy') {
+//                                 sh "terraform destroy -auto-approve -var-file=${params.'File-Name'}"
+//                             } else {
+//                                 error "Invalid value for Terraform-Action: ${params.'Terraform-Action'}"
+//                             }
+//                         }
+//                     }
+//                 }
+//                 }
+//             }
+//         }
+// Stage 5 — Executer l'action choisie par l'utilisateur.
+
+// echo "${params.'Terraform-Action'}" → Affiche dans les logs quelle action a ete choisie.
+// Le bloc if/else if/else lit le parametre Terraform-Action et execute la bonne commande :
+// plan → Re-execute un plan (affiche les changements, rien de cree).
+// apply -auto-approve → Cree ou modifie vraiment l'infrastructure sur AWS sans demander confirmation.
+// destroy -auto-approve → Supprime toute l'infrastructure sur AWS sans demander confirmation.
+// else → Si l'utilisateur passe une valeur inconnue, le pipeline echoue avec un message d'erreur clair.
+// Resume du flux global :
+
+
+// Git clone → terraform init → terraform validate → terraform plan → action (plan/apply/destroy)
+// Le pipeline est concu pour etre safe : on valide d'abord (validate, plan) avant d'agir (apply/destroy). Le parametre Terraform-Action donne le controle a l'utilisateur sans modifier le code.
