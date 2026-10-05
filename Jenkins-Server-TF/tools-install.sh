@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 # For Ubuntu 22.04
 # Intsalling Java
 sudo apt update
@@ -7,7 +7,7 @@ java --version
 
 # Installing Jenkins
 sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
-  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
 echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
   https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
   /etc/apt/sources.list.d/jenkins.list > /dev/null
@@ -26,7 +26,10 @@ sudo chmod 777 /var/run/docker.sock
 # docker run -d -p 8080:8080 -p 50000:50000 --name jenkins-container jenkins/jenkins:lts
 
 # Run Docker Container of Sonarqube
-docker run -d --name sonarqube -p 9000:9000 sonarqube:community
+sudo sysctl -w vm.max_map_count=524288
+sudo sysctl -w fs.file-max=131072
+echo -e "vm.max_map_count=524288\nfs.file-max=131072" | sudo tee /etc/sysctl.d/99-sonarqube.conf
+docker run -d --name sonarqube --restart unless-stopped -p 9000:9000 sonarqube:community
 
 
 # Installing Terraform
@@ -59,7 +62,7 @@ sudo ./aws/install
 # Installing Trivy
 sudo apt-get install wget gnupg
 wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
 sudo apt-get update
-sudo apt-get install trivy
+sudo apt-get install trivy -y
 trivy --version

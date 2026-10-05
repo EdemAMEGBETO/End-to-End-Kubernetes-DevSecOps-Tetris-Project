@@ -1,0 +1,50 @@
+# ============================================================
+#  .gitignore racine — gère tout le dépôt
+# ============================================================
+
+# ---------- Terraform (Jenkins-Server-TF, EKS-TF) ----------
+# Providers/modules téléchargés par terraform init
+**/.terraform/
+# State local : IDs, IP, parfois des secrets
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+# Plans sauvegardés
+*.tfplan
+tfplan
+# Overrides locaux
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Configs propres à ton compte AWS (copier les *.example)
+*.tfvars
+*.tfvars.json
+backend.hcl
+# EXCEPTION : le pipeline Jenkins (Jenkinsfile-EKS-Terraform) clone le repo
+# et lance "terraform plan -var-file=variables.tfvars" dans EKS-TF.
+# Ignorer ce fichier ferait planter le pipeline -> il reste versionné.
+!EKS-TF/variables.tfvars
+
+# ---------- Node / React (Tetris-V1, Tetris-V2) ----------
+node_modules/
+build/
+npm-debug.log*
+yarn-error.log*
+
+# ---------- Clés, secrets, env ----------
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+kubeconfig*
+
+# ---------- OS / IDE ----------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

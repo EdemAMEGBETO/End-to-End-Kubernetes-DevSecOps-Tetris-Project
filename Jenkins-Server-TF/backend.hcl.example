@@ -1,0 +1,4 @@
+# Copier en backend.hcl puis : terraform init -backend-config=backend.hcl
+bucket = "<ton-bucket-s3-tfstate>"
+region = "us-east-1"
+key    = "End-to-End-Kubernetes-DevSecOps-Tetris-Project/Jenkins-Server-TF/terraform.tfstate"

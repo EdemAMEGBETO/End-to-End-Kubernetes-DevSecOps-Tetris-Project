@@ -1,8 +1,7 @@
 terraform {
+  # Config partielle : bucket/region/key dans backend.hcl (non versionné)
+  # terraform init -backend-config=backend.hcl
   backend "s3" {
-    bucket       = "dev-aman-tf-bucket"
-    region       = "us-east-1"
-    key          = "End-to-End-Kubernetes-DevSecOps-Tetris-Project/Jenkins-Server-TF/terraform.tfstate"
     encrypt      = true
     use_lockfile = true
   }
